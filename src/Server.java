@@ -20,10 +20,10 @@ public class Server {
                 inComing = s.accept();
                 ThreadHander hander = new ThreadHander(inComing);
                 Thread thread = new Thread(hander);
-                System.out.println(hander);
+                //System.out.println(hander);
                 setUser(hander);
                 System.out.println("user is:" + user.size());
-                System.out.println("lei is:" + Server.user.size());
+               // System.out.println("lei is:" + Server.user.size());
                 thread.start();
                 i++;
                 System.out.println("SB" + i);
@@ -44,13 +44,13 @@ public class Server {
     }
 
     public void setMessage(String s){
-        System.out.println("setMessage");
-        System.out.println(s);
-        System.out.println(messages.size());
+        //System.out.println("setMessage");
+        //System.out.println(s);
+        //System.out.println(messages.size());
         messages.offer(s);
-        System.out.println(messages.isEmpty());
-        System.out.println(messages.size());
-        System.out.println("!!!!!!!!!");
+        //System.out.println(messages.isEmpty());
+        //System.out.println(messages.size());
+        //System.out.println("!!!!!!!!!");
         pushMessage();
     }
 
@@ -60,7 +60,7 @@ public class Server {
            /* System.out.println(message);
             System.out.println("user is:" + user.size());*/
             for (ThreadHander i : user) {
-                System.out.println("push");
+                //System.out.println("push");
                 i.getAndPushData(message);
             }
         }
@@ -105,7 +105,6 @@ class ThreadHander implements Runnable{
         }
     }
     public void admitData(){
-        out.print("Hello Newer!!");
         boolean done = false;
         while(!false && in.hasNextLine()){
             //out.printf("%s","i am says:");
@@ -115,7 +114,7 @@ class ThreadHander implements Runnable{
                 done = true;
                 break;
             }
-            System.out.println("temp is:" + temp);
+            //System.out.println("temp is:" + temp);
             server.setMessage(temp);
         }
     }
