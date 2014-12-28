@@ -3,13 +3,16 @@ import java.io.*;
 import java.util.*;
 import java.util.Scanner;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ConcurrentSkipListSet;
+
 
 /**
  * Created by smjcm on 2014/12/19.
  */
 public class Server {
-
-    public Server(){
+    public static void main(String[] args){
+        Server server = Server.getInstance();
+        server.start();
     }
 
     public void start(){
@@ -20,13 +23,9 @@ public class Server {
                 inComing = s.accept();
                 ThreadHander hander = new ThreadHander(inComing);
                 Thread thread = new Thread(hander);
-                //System.out.println(hander);
-                setUser(hander);
-                System.out.println("user is:" + user.size());
-               // System.out.println("lei is:" + Server.user.size());
                 thread.start();
-                i++;
-                System.out.println("SB" + i);
+                userCount++;
+                System.out.println("SB" + userCount);
             }catch(IOException e){
                 e.printStackTrace();
             }
@@ -34,8 +33,9 @@ public class Server {
     }
 
     public void init(){
-        user = new ArrayList<ThreadHander>();
+        user = new HashMap<String,ThreadHander>();
         messages = new ArrayBlockingQueue<String>(100);
+        userNameSet = new ConcurrentSkipListSet<String>();
         try{
             this.s = new ServerSocket(8189);
         }catch(IOException e){
@@ -43,88 +43,111 @@ public class Server {
         }
     }
 
-    public void setMessage(String s){
-        //System.out.println("setMessage");
-        //System.out.println(s);
-        //System.out.println(messages.size());
-        messages.offer(s);
-        //System.out.println(messages.isEmpty());
-        //System.out.println(messages.size());
-        //System.out.println("!!!!!!!!!");
+    public void setMessage(String s,ThreadHander hander){
+        String pushMessage = hander.toString()+","+ s;
+        messages.offer(pushMessage);
         pushMessage();
     }
 
     public void pushMessage(){
         while(!messages.isEmpty()) {
             String message = messages.poll();
-           /* System.out.println(message);
-            System.out.println("user is:" + user.size());*/
-            for (ThreadHander i : user) {
-                //System.out.println("push");
-                i.getAndPushData(message);
+            String[] tmp = message.split(",");
+            Set<String> targetUser = user.keySet();
+            for(String i : targetUser){
+                if (!i.equals(tmp[0])){
+                    user.get(i).outData(user.get(tmp[0]).getUserName()+","+tmp[1]);
+                }
             }
         }
     }
 
-    public void setUser(ThreadHander th){
-        user.add(th);
+    public void setUser(ThreadHander th, String name){
+        user.put(th.toString(),th);
+        userNameSet.add(name);
     }
 
-    public void delUser(ThreadHander th){
-        user.remove(th);
+    public void delUser(ThreadHander th,String userName){
+        user.remove(th.toString());
+        this.userNameSet.remove(userName);
     }
 
+    public boolean find(String name){
+        return userNameSet.contains(name);
+    }
+
+    private Server(){}
+
+    public static Server getInstance(){
+        return server;
+    }
+
+    public void decUserCount(){
+        userCount--;
+    }
+
+    public static ConcurrentSkipListSet<String> userNameSet;
+    public static HashMap<String,ThreadHander> user;
+
+    private static Server server = new Server();
     private Socket inComing;
     private ServerSocket s;
-    public static List<ThreadHander> user;
     private static ArrayBlockingQueue<String> messages;
+    private static int userCount = 0;
 }
 
 class ThreadHander implements Runnable{
-    public ThreadHander(){
-    }
     public ThreadHander(Socket inComing){
         this.inComing = inComing;
-        server = new Server();
+        server = Server.getInstance();
     }
     public void run(){
         try {
             try {
-                inStream = inComing.getInputStream();
-                outStream = inComing.getOutputStream();
-                in = new Scanner(inStream);
-                out = new PrintWriter(outStream,true);
-                out.println("Hello Newer!!");
-                admitData();
+                in = new Scanner(inComing.getInputStream());
+                out = new PrintWriter(inComing.getOutputStream(),true);
+                inData();
             } finally {
+                System.out.println(userName + "is out");
+                server.delUser(this, userName);
+                outData("close");
+                server.decUserCount();
                 inComing.close();
-                //new Server().delUser(this);
-            }
+                }
         }catch(IOException e){
             e.printStackTrace();
         }
     }
-    public void admitData(){
-        boolean done = false;
-        while(!false && in.hasNextLine()){
-            //out.printf("%s","i am says:");
-            String temp = in.nextLine();
-            //out.println(temp);
-            if (temp.trim().equals("BYE"))   {
-                done = true;
+    public void inData(){
+        while(true) {
+            userName = in.nextLine();
+            if(server.find(userName)){
+                out.println("exits");
+            } else {
+                out.println("done");
                 break;
             }
-            //System.out.println("temp is:" + temp);
-            server.setMessage(temp);
+        }
+        server.setUser(this, userName);
+        out.println("OK");
+        //System.out.println("OK");
+        while(in.hasNextLine()){
+            String temp = in.nextLine();
+            if (temp.trim().equals("BYE"))   {
+                break;
+            }
+            server.setMessage(temp,this);
         }
     }
-    public void getAndPushData(String message){
+    public String getUserName(){
+        return userName;
+    }
+    public void outData(String message){
         out.println(message);
     }
+    private String userName;
     private Scanner in;
     private PrintWriter out;
     private Server server;
     private Socket inComing;
-    private InputStream inStream;
-    private OutputStream outStream;
 }

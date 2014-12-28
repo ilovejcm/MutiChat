@@ -3,8 +3,8 @@
  */
 public class GO {
     public static void main(String[] args){
-        Server server = new Server();
-        server.start();
-        return ;
+        //Server server = new Server();
+        //server.start();
+        //return ;
     }
 }
